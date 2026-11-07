@@ -1,0 +1,104 @@
+CONFIG PERMISSIONS - ThinkPad Yoga 11e (Arch Linux + i3)
+Written 2026-11-07
+
+Modes are octal, then symbolic. "Owner" is user:group.
+Files marked (link) are stowed symlinks; chmod follows the link and changes
+the real file inside ~/Gezaji/Configs, which is what git records.
+
+
+1. USER CONFIGS (owner: gezaji:gezaji)
+------------------------------------------------------------------------------
+Path                                    Mode  Symbolic    Notes
+------------------------------------------------------------------------------
+~/.config/i3/config (link)              644   -rw-r--r--  i3 config
+~/.config/polybar/config.ini (link)     644   -rw-r--r--  polybar bar + modules
+~/.config/polybar/launch.sh (link)      755   -rwxr-xr-x  must be executable
+~/.config/dunst/dunstrc (link)          644   -rw-r--r--  notification style
+~/.local/bin/volume.sh (link)           755   -rwxr-xr-x  must be executable
+~/.local/bin/brightness.sh (link)       755   -rwxr-xr-x  must be executable
+~/.local/bin/wallpaper.sh (link)        755   -rwxr-xr-x  must be executable
+~/.vimrc (link)                         644   -rw-r--r--  vim config
+~/.bashrc (link)                        644   -rw-r--r--  shell config
+~/.wallpapers/gritty.png (link)         644   -rw-r--r--  HDMI-1 wallpaper
+~/.wallpapers/simple.png (link)         644   -rw-r--r--  eDP-1 wallpaper
+
+If you saved the autorandr hook script from the earlier install:
+~/.config/autorandr/postswitch.d/*.sh   755   -rwxr-xr-x  hooks must be executable
+~/.config/autorandr/<profile>/*         644   -rw-r--r--  saved profiles
+
+
+2. DIRECTORIES (owner: gezaji:gezaji, mode 755 drwxr-xr-x)
+------------------------------------------------------------------------------
+~/.config/i3
+~/.config/polybar
+~/.config/dunst
+~/.local/bin
+~/.wallpapers
+~/Gezaji
+~/Gezaji/Configs
+
+
+3. SYSTEM-LEVEL FILES (owner: root:root, write with sudo)
+------------------------------------------------------------------------------
+/etc/X11/xorg.conf.d/                   755   drwxr-xr-x  directory
+/etc/X11/xorg.conf.d/30-input.conf      644   -rw-r--r--  touchpad, mouse
+                                                          accel, touchscreen
+                                                          disabled
+
+
+4. REPO FILES (~/Gezaji/Configs, owner: gezaji:gezaji)
+------------------------------------------------------------------------------
+Git stores only the executable bit. These are the modes it should record:
+
+100755  bin/.local/bin/volume.sh
+100755  bin/.local/bin/brightness.sh
+100755  bin/.local/bin/wallpaper.sh
+100755  polybar/.config/polybar/launch.sh
+100644  everything else (configs, wallpapers, README.md, system/pkglist.txt,
+        system/etc/X11/xorg.conf.d/30-input.conf)
+
+
+5. SSH (owner: gezaji:gezaji)
+------------------------------------------------------------------------------
+~/.ssh                                  700   drwx------  ssh refuses looser
+~/.ssh/id_ed25519                       600   -rw-------  PRIVATE key, never share
+~/.ssh/id_ed25519.pub                   644   -rw-r--r--  public key, safe to share
+~/.ssh/known_hosts                      644   -rw-r--r--  (600 is also fine)
+
+
+6. CHECK EVERYTHING
+------------------------------------------------------------------------------
+stat -c '%a %U:%G %n' \
+  ~/.config/i3/config ~/.config/polybar/config.ini ~/.config/polybar/launch.sh \
+  ~/.config/dunst/dunstrc ~/.local/bin/*.sh ~/.vimrc ~/.bashrc \
+  ~/.wallpapers/*.png /etc/X11/xorg.conf.d/30-input.conf \
+  ~/.ssh ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
+
+Note: stat on a symlink path reports the symlink itself only with -L omitted.
+Add -L (stat -L -c ...) to see the permissions of the real files they point to.
+
+
+7. FIX EVERYTHING
+------------------------------------------------------------------------------
+chmod 644 ~/.config/i3/config ~/.config/polybar/config.ini \
+  ~/.config/dunst/dunstrc ~/.vimrc ~/.bashrc ~/.wallpapers/*.png
+chmod 755 ~/.config/polybar/launch.sh ~/.local/bin/*.sh
+sudo chown root:root /etc/X11/xorg.conf.d/30-input.conf
+sudo chmod 644 /etc/X11/xorg.conf.d/30-input.conf
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/id_ed25519
+chmod 644 ~/.ssh/id_ed25519.pub
+
+After fixing permissions on files inside the repo, commit the change:
+cd ~/Gezaji/Configs && git add -A && git commit -m "Fix permissions" && git push
+
+
+8. WHY THESE MODES
+------------------------------------------------------------------------------
+- 644 for plain config files: you can edit, everyone can read.
+- 755 for anything that runs: scripts launched by i3 (exec) will silently
+  fail without the executable bit.
+- 700/600 on ~/.ssh and the private key: ssh ignores keys that other users
+  can read, and prints "UNPROTECTED PRIVATE KEY FILE".
+- /etc files stay root-owned: X reads them at startup; a normal user should
+  not be able to change input or login behaviour system-wide.
